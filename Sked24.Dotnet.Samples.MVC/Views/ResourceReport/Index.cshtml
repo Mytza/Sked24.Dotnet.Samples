@@ -1,0 +1,90 @@
+﻿@model Sked24.Dotnet.Samples.MVC.Models.ResourceReportFiltersDto
+@{
+    ViewBag.Title = "Resource Report";
+}
+<h2>@ViewBag.Title</h2>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    <div class="form-horizontal">
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.DateFrom, htmlAttributes: new { @class = "control-label col-md-2" })
+                <div class='input-group date' id="dateFrom">
+                    @Html.TextBoxFor(dto => dto.DateFrom, new { @class = "form-control", @id = "dateFrom1" })
+                    @Html.ValidationMessageFor(model => model.DateFrom, "", new { @class = "text-danger" })
+                    <span class="input-group-addon">
+                        <span class="glyphicon glyphicon-calendar"></span>
+                    </span>
+                </div>
+            </div>
+
+
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.DateTo, htmlAttributes: new { @class = "control-label col-md-2" })
+                <div class='input-group date' id="dateTo">
+                    @Html.TextBoxFor(dto => dto.DateTo, new { @class = "form-control", @id = "dateTo" })
+                    @Html.ValidationMessageFor(model => model.DateTo, "", new { @class = "text-danger" })
+                    <span class="input-group-addon">
+                        <span class="glyphicon glyphicon-calendar"></span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.ResourceName, htmlAttributes: new { @class = "control-label col-md-2" })
+                <div class="col-md-10">
+                    @Html.EditorFor(model => model.ResourceName, new { htmlAttributes = new { @class = "form-control", @id = "ResourceName" } })
+                </div>
+            </div>
+
+
+            <div class="form-group">
+                <div class="col-md-offset-2 col-md-10">
+                    <input type="submit" value="Generate" class="btn btn-default" />
+                </div>
+            </div>
+        </div>
+}
+<script type="text/javascript">
+    $(function () {
+        $('#dateFrom').datetimepicker({
+        });
+        $('#dateTo').datetimepicker({
+            useCurrent: false //Important! See issue #1075
+        });
+        $("#dateFrom").on("dp.change", function (e) {
+            $('#dateTo').data("DateTimePicker").minDate(e.date);
+        });
+        $("#dateTo").on("dp.change", function (e) {
+            $('#dateFrom').data("DateTimePicker").maxDate(e.date);
+        });
+    });
+</script>
+<!-- Include another way -->
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $("#ResourceName").autocomplete({
+            source: function (request, response) {
+                $.ajax({
+                    url: "/ResourceReport/ResourceAutocomplete/",
+                    type: "POST",
+                    dataType: "json",
+                    data: { Prefix: request.term },
+                    success: function(data) {
+                        response($.map(data,
+                            function(item) {
+                                return { label: item.Name, value: item.Name };
+                            }));
+                    }
+                });
+            },
+            messages: {
+                noResults: "", results: ""
+            }
+        });
+    })
+</script>  
