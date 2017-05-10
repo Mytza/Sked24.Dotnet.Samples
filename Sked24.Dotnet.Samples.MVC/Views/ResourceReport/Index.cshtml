@@ -11,7 +11,7 @@
 
             <div class="form-group">
                 @Html.LabelFor(model => model.DateFrom, htmlAttributes: new { @class = "control-label col-md-2" })
-                <div class='input-group date' id="dateFrom">
+                <div class='input-group col-md-3 date' id="dateFrom">
                     @Html.TextBoxFor(dto => dto.DateFrom, new { @class = "form-control", @id = "dateFrom1" })
                     @Html.ValidationMessageFor(model => model.DateFrom, "", new { @class = "text-danger" })
                     <span class="input-group-addon">
@@ -24,7 +24,7 @@
 
             <div class="form-group">
                 @Html.LabelFor(model => model.DateTo, htmlAttributes: new { @class = "control-label col-md-2" })
-                <div class='input-group date' id="dateTo">
+                <div class='input-group  col-md-3 date' id="dateTo">
                     @Html.TextBoxFor(dto => dto.DateTo, new { @class = "form-control", @id = "dateTo" })
                     @Html.ValidationMessageFor(model => model.DateTo, "", new { @class = "text-danger" })
                     <span class="input-group-addon">
@@ -35,8 +35,9 @@
 
             <div class="form-group">
                 @Html.LabelFor(model => model.ResourceName, htmlAttributes: new { @class = "control-label col-md-2" })
-                <div class="col-md-10">
+                <div class="input-group col-md-10">
                     @Html.EditorFor(model => model.ResourceName, new { htmlAttributes = new { @class = "form-control", @id = "ResourceName" } })
+                    @Html.HiddenFor(model => model.ResourceId, new {@id = "ResourceId"})
                 </div>
             </div>
 
@@ -52,6 +53,7 @@
     $(function () {
         $('#dateFrom').datetimepicker({
         });
+
         $('#dateTo').datetimepicker({
             useCurrent: false //Important! See issue #1075
         });
@@ -63,7 +65,6 @@
         });
     });
 </script>
-<!-- Include another way -->
 <script type="text/javascript">
 
     $(document).ready(function () {
@@ -71,19 +72,22 @@
             source: function (request, response) {
                 $.ajax({
                     url: "/ResourceReport/ResourceAutocomplete/",
-                    type: "POST",
+                    type: "GET",
                     dataType: "json",
-                    data: { Prefix: request.term },
+                    data: { prefix: request.term },
                     success: function(data) {
                         response($.map(data,
                             function(item) {
-                                return { label: item.Name, value: item.Name };
+                                return { label: item.Name, value: item.Name, id: item.Id };
                             }));
                     }
                 });
             },
             messages: {
                 noResults: "", results: ""
+            },
+            select: function (e, i) {
+                $("#ResourceId").val(i.item.id);
             }
         });
     })
