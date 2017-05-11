@@ -4,6 +4,7 @@ using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
@@ -57,10 +58,11 @@ namespace Sked24.Dotnet.Samples.MVC.Controllers
         [ValidateAntiForgeryToken]
         public async Task<HttpResponse> Index(ResourceReportFiltersDto filters)
         {
+
             var result = await ReadResourceData.GetResourceData(container, filters);
-            var response = new HttpResponse(this.Response.Output);
+            var response = ControllerContext.RequestContext.HttpContext.ApplicationInstance.Response;
             CreateExcel.CreateExcelFile.
-                CreateExcelDocument<ResourceAppointmentsDto>(result.ToList(),"mytestfile.xlsx", response);
+                CreateExcelDocument<ResourceAppointmentsDto>(result.ToList(),"Resource report.xlsx",response);
             return response;
         }
 
