@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 using Microsoft.OData.Client;
 using Sked24.Dotnet.Samples.MVC.Business;
+using Sked24.Dotnet.Samples.MVC.Business.ExcelGenerator;
 using Sked24.Dotnet.Samples.MVC.Models;
 using Sked24.Dotnet.Samples.OdataClient.EntitySets;
 using Sked24.Dotnet.Samples.OdataClient.WebApiModel.DTO;
@@ -21,22 +24,27 @@ namespace Sked24.Dotnet.Samples.MVC.Controllers
 
         private Container container;
         private readonly string thirdPartyKey;
+
         public ResourceReportController()
         {
             //read from config
             var uri = ConfigurationManager.AppSettings[UriAppSetting];
             thirdPartyKey = ConfigurationManager.AppSettings[ThirdApiKeyAppSetting];
-            
+
             container = new Container(new Uri(uri));
             //add header for each outgong request
             container.SendingRequest2 += ContainerOnSendingRequest2;
             container.EntityParameterSendOption = EntityParameterSendOption.SendOnlySetProperties;
             container.MergeOption = MergeOption.OverwriteChanges;
+            container.IgnoreMissingProperties = true;
+            container.IgnoreResourceNotFoundException = true;
         }
+
 
         private void ContainerOnSendingRequest2(object sender, SendingRequest2EventArgs sendingRequest2EventArgs)
         {
             sendingRequest2EventArgs.RequestMessage.SetHeader(ThirdPartyApiHeader, thirdPartyKey);
+            sendingRequest2EventArgs.RequestMessage.SetHeader("X-ClientId", "AWAUsers");
         }
 
         // GET: ResourceReport
@@ -47,11 +55,13 @@ namespace Sked24.Dotnet.Samples.MVC.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Index(ResourceReportFiltersDto filters)
+        public async Task<HttpResponse> Index(ResourceReportFiltersDto filters)
         {
             var result = await ReadResourceData.GetResourceData(container, filters);
-            var data = new byte[0];
-            return File(data, "application/vnd.ms-excel", "mytestfile.xls");
+            var response = new HttpResponse(this.Response.Output);
+            CreateExcel.CreateExcelFile.
+                CreateExcelDocument<ResourceAppointmentsDto>(result.ToList(),"mytestfile.xlsx", response);
+            return response;
         }
 
         [HttpGet]
@@ -62,11 +72,6 @@ namespace Sked24.Dotnet.Samples.MVC.Controllers
                     Where(x => x.Cancelled == false && x.FullName.StartsWith(prefix))
                     .OrderBy(x => x.FullName)
                     .Take(50);
-                    //.Select(x => new
-                    //{
-                    //    Id = x.Id,
-                    //    FullName = x.FullName
-                    //});
 
             var request = query as DataServiceQuery<PhysicianDTO>;
 
