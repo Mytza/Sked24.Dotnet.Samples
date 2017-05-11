@@ -19,7 +19,6 @@ namespace Sked24.Dotnet.Samples.MVC.Controllers
 {
     public class ResourceReportController : Controller
     {
-        private const string ThirdPartyApiHeader = "ThirdApiKey";
         private const string UriAppSetting = "Sked24Uri";
         private const string ThirdApiKeyAppSetting = "ThirdApiKey";
 
@@ -44,8 +43,7 @@ namespace Sked24.Dotnet.Samples.MVC.Controllers
 
         private void ContainerOnSendingRequest2(object sender, SendingRequest2EventArgs sendingRequest2EventArgs)
         {
-            sendingRequest2EventArgs.RequestMessage.SetHeader(ThirdPartyApiHeader, thirdPartyKey);
-            sendingRequest2EventArgs.RequestMessage.SetHeader("X-ClientId", "AWAUsers");
+            sendingRequest2EventArgs.RequestMessage.SetHeader("Authorization", $"Bearer {thirdPartyKey}");
         }
 
         // GET: ResourceReport

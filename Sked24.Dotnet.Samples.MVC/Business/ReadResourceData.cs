@@ -35,7 +35,7 @@ namespace Sked24.Dotnet.Samples.MVC.Business
             var cancelledAppointmentsQuery =
                 container.Appointments.IncludeTotalCount().Where(
                     x =>
-                        x.Cancelled == false && x.DateTimeFromUTC >= filters.DateFrom.ToUniversalTime() &&
+                        x.Cancelled == true && x.DateTimeFromUTC >= filters.DateFrom.ToUniversalTime() &&
                         x.DateTimeToUTC <= filters.DateTo.ToUniversalTime() && x.PhysicianId == filters.ResourceId);
             var cancelledCountQuery = cancelledAppointmentsQuery.Take(0);
 
@@ -123,6 +123,8 @@ namespace Sked24.Dotnet.Samples.MVC.Business
                         usersParsed.Add(guid);
                     }
                 }
+                //Remove possible duplicates
+                usersParsed = usersParsed.Distinct().ToList();
 
                 var usersTask = usersParsed.Select(userId => container.Users.ByKey(userId).GetValueAsync()).ToList();
                 var users = (await Task.WhenAll(usersTask)).ToList();
@@ -159,7 +161,7 @@ namespace Sked24.Dotnet.Samples.MVC.Business
                     ResourceDocumentNumber = resource.DocumentNumber,
                     ResourceName = resource.FullName,
                     ServiceName = services.FirstOrDefault(s => s.Id == x.ServiceId)?.Name,
-                    SpecialityName = services.FirstOrDefault(s => s.Id == x.ServiceId)?.Speciality.Name,
+                    SpecialityName = services.FirstOrDefault(s => s.Id == x.ServiceId)?.Speciality?.Name,
                     LocationName = centers.FirstOrDefault(c => c.Id == x.CenterId)?.Name,
                     CreatedByChannel = x.CreatedByClient
                 });
