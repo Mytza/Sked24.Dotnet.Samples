@@ -77,7 +77,6 @@ namespace Sked24.Dotnet.Samples.MVC.Controllers
 
             var response = await request.ExecuteAsync();
             var a = response.ToList();
-           // var collection = new DataServiceCollection<PhysicianDTO>(response, TrackingMode.AutoChangeTracking, "Physicians", null, null);
             var result = a.Select(x => new {Id = x.Id, Name = x.FullName});
             return Json(result, JsonRequestBehavior.AllowGet);
         }

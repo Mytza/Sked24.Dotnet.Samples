@@ -16,7 +16,9 @@ namespace Sked24.Dotnet.Samples.MVC.Business
     public class ReadResourceData
     {
         private const int PackageSize = 100;
-        public static async Task<IEnumerable<ResourceAppointmentsDto>> GetResourceData(Container container, ResourceReportFiltersDto filters)
+
+        public static async Task<IEnumerable<ResourceAppointmentsDto>> GetResourceData(Container container,
+            ResourceReportFiltersDto filters)
         {
             var appointmentsQuery =
                 container.Appointments.IncludeTotalCount().Where(
@@ -43,7 +45,7 @@ namespace Sked24.Dotnet.Samples.MVC.Business
 
             //get number of appointments
             var cancelCountResult = await cancelledCountRequest.ExecuteAsync();
-            var cancelledCount = ((QueryOperationResponse)cancelCountResult).TotalCount;
+            var cancelledCount = ((QueryOperationResponse) cancelCountResult).TotalCount;
 
             var totalCount = cancelledCount + count;
 
@@ -57,7 +59,7 @@ namespace Sked24.Dotnet.Samples.MVC.Business
                 var tasks = new List<Task<IEnumerable<AppointmentDTO>>>();
                 while (offset < count)
                 {
-                    tasks.Add(GetAppointments(offset,PackageSize, container, filters));
+                    tasks.Add(GetAppointments(offset, PackageSize, container, filters));
                     offset += PackageSize;
                 }
                 var results = await Task.WhenAll(tasks);
@@ -72,16 +74,20 @@ namespace Sked24.Dotnet.Samples.MVC.Business
                     offset += PackageSize;
                 }
                 var cancelledResults = await Task.WhenAll(tasks);
-                appointments.AddRange(cancelledResults.SelectMany(x =>x));
+                appointments.AddRange(cancelledResults.SelectMany(x => x));
 
                 //we now have read all appointments we need to read user,center and service information
                 var centerIds = appointments.Select(x => x.CenterId).Distinct().ToList();
 
-                var centerTask = centerIds.Select(centerId => container.Centers.ByKey(centerId).GetValueAsync()).ToList();
+                var centerTask =
+                    centerIds.Select(centerId => container.Centers.ByKey(centerId).GetValueAsync()).ToList();
                 var centers = (await Task.WhenAll(centerTask)).ToList();
 
                 var serviceIds = appointments.Select(x => x.ServiceId).Distinct();
-                var serviceTask = serviceIds.Select(serviceId => container.Services.ByKey(serviceId).Expand(x => x.Speciality).GetValueAsync()).ToList();
+                var serviceTask =
+                    serviceIds.Select(
+                            serviceId => container.Services.ByKey(serviceId).Expand(x => x.Speciality).GetValueAsync())
+                        .ToList();
                 var services = (await Task.WhenAll(serviceTask)).ToList();
 
                 //CreatedBy user
@@ -126,8 +132,9 @@ namespace Sked24.Dotnet.Samples.MVC.Business
                 //Remove possible duplicates
                 usersParsed = usersParsed.Distinct().ToList();
 
-                var usersTask = usersParsed.Select(userId => container.Users.ByKey(userId).GetValueAsync()).ToList();
-                var users = (await Task.WhenAll(usersTask)).ToList();
+                var usersTask = usersParsed.Select(userId => GetUser(userId, container)).ToList();
+                var tasks2 = await Task.WhenAll(usersTask);
+                var users = tasks2.ToList();
 
                 //convert appointments to required 
                 var result = appointments.Select(x => new ResourceAppointmentsDto
@@ -140,7 +147,7 @@ namespace Sked24.Dotnet.Samples.MVC.Business
                     Status = x.Status.ToString(),
                     CreatedOn = x.CreatedOn,
                     CreatedBy =
-                        users.Where(u => u.Id.ToString() == x.CreatedBy)
+                        users.Where(u => u != null && u.Id.ToString() == x.CreatedBy)
                             .Select(u => $"{u.FirstName} {u.LastName}")
                             .FirstOrDefault() ?? x.CreatedBy,
                     Confirmed = x.StatusHistories.FirstOrDefault(s => s.Status == AppointmentStatus.Confirmed) != null,
@@ -152,9 +159,9 @@ namespace Sked24.Dotnet.Samples.MVC.Business
                     CancelledBy =
                         !x.Cancelled
                             ? string.Empty
-                            : users.Where(u => u.Id.ToString() == x.ModifiedBy)
+                            : users.Where(u => u != null && u.Id.ToString() == x.ModifiedBy)
                                   .Select(u => $"{u.FirstName} {u.LastName}")
-                                  .FirstOrDefault() ?? x.ModifiedBy,  //Cancelled user is the last who modified
+                                  .FirstOrDefault() ?? x.ModifiedBy, //Cancelled user is the last who modified
                     CancelledOn = !x.Cancelled ? null : (DateTimeOffset?) x.ModifiedOn,
                     IsOvercapacity = x.IsOvercapacity,
                     Area = services.FirstOrDefault(s => s.Id == x.ServiceId)?.Area.ToString(),
@@ -170,25 +177,27 @@ namespace Sked24.Dotnet.Samples.MVC.Business
             return new List<ResourceAppointmentsDto>();
         }
 
-        public static async Task<IEnumerable<AppointmentDTO>> GetAppointments(int offset, int packageSize, Container container, ResourceReportFiltersDto filters)
+        public static async Task<IEnumerable<AppointmentDTO>> GetAppointments(int offset, int packageSize,
+            Container container, ResourceReportFiltersDto filters)
         {
             var query = container.Appointments
                 .Expand(x => x.Patient)
                 .Expand(x => x.StatusHistories)
                 .Where(
-                x =>
-                    x.Cancelled == false && x.DateTimeFromUTC >= filters.DateFrom.ToUniversalTime() &&
-                    x.DateTimeToUTC <= filters.DateTo.ToUniversalTime() && x.PhysicianId == filters.ResourceId);
+                    x =>
+                        x.Cancelled == false && x.DateTimeFromUTC >= filters.DateFrom.ToUniversalTime() &&
+                        x.DateTimeToUTC <= filters.DateTo.ToUniversalTime() && x.PhysicianId == filters.ResourceId);
             var appointmentQuery = query.Skip(offset).Take(packageSize);
             var appointmentRequest = appointmentQuery as DataServiceQuery<AppointmentDTO>;
 
-            
+
             var result = await appointmentRequest.ExecuteAsync();
             var resultSet = result.ToList<AppointmentDTO>();
             return resultSet;
         }
 
-        public static async Task<IEnumerable<AppointmentDTO>> GetCancelledAppointments(int offset, int packageSize, Container container, ResourceReportFiltersDto filters)
+        public static async Task<IEnumerable<AppointmentDTO>> GetCancelledAppointments(int offset, int packageSize,
+            Container container, ResourceReportFiltersDto filters)
         {
             var query = container.Appointments.Expand(x => x.Patient).Expand(x => x.StatusHistories).Where(
                 x =>
@@ -200,6 +209,29 @@ namespace Sked24.Dotnet.Samples.MVC.Business
             var result = await appointmentRequest.ExecuteAsync();
             var resultSet = result.ToList<AppointmentDTO>();
             return resultSet;
+        }
+
+        private static async Task<UserDTO> GetUser(Guid id, Container container)
+        {
+            try
+            {
+                var result = await container.Users.ByKey(id).GetValueAsync();
+                return result;
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    var query = container.Users.Where(x => x.Cancelled && x.Id == id);
+                    var result = (await (query as DataServiceQuery<UserDTO>).ExecuteAsync()).FirstOrDefault();
+                    return result;
+                }
+                catch (Exception)
+                {
+                    //ignore
+                }
+            }
+            return null;
         }
     }
 }
