@@ -154,7 +154,15 @@ namespace Sked24.Dotnet.Samples.MVC.Business
                     ConfirmedOn =
                         x.StatusHistories.FirstOrDefault(s => s.Status == AppointmentStatus.Confirmed)?.CreatedOn,
                     ConfirmedBy =
-                        x.StatusHistories.FirstOrDefault(s => s.Status == AppointmentStatus.Confirmed)?.CreatedBy,
+                        users.Where(
+                                u =>
+                                    u != null &&
+                                    u.Id.ToString() ==
+                                    x.StatusHistories.FirstOrDefault(s => s.Status == AppointmentStatus.Confirmed)?
+                                        .CreatedBy)
+                            .Select(u => $"{u.FirstName} {u.LastName}")
+                            .FirstOrDefault() ??
+                        string.Empty,
                     Cancelled = x.Cancelled,
                     CancelledBy =
                         !x.Cancelled
